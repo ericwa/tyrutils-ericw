@@ -60,10 +60,10 @@ const char * light_t::classname() const {
 
 static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 
-static bool IsSwitchableLightstyle(int style) {
+/*static bool IsSwitchableLightstyle(int style) {
     return style >= LIGHT_TARGETS_START
         && style < (LIGHT_TARGETS_START + MAX_LIGHT_TARGETS);
-}
+}*/
 
 static entdict_t &WorldEnt()
 {
@@ -99,13 +99,15 @@ LightStyleForTargetname(const std::string &targetname)
         }
     }
     
-    // check if full
-    if (lightstyleForTargetname.size() == MAX_LIGHT_TARGETS) {
-        Error("%s: Too many unique light targetnames\n", __func__);
-    }
-    
     // generate a new style number and return it
     const int newStylenum = LIGHT_TARGETS_START + lightstyleForTargetname.size();
+    if (newStylenum >= (facestyles?INVALID_LIGHTSTYLE:INVALID_LIGHTSTYLE_OLD))
+    {
+        if (!facestyles)
+            Error("%s: Too many unique light targetnames (reached max of %i)\nTip: Use '-facestyles N' for 16bit lightstyle limits in supporting engines.", __func__, newStylenum-LIGHT_TARGETS_START);
+        else
+            Error("%s: Too many unique light targetnames (reached max of %i)\n", __func__, newStylenum-LIGHT_TARGETS_START);
+    }
     lightstyleForTargetname.emplace_back(targetname, newStylenum); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     
     if (verbose_log) {
@@ -376,8 +378,8 @@ CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
         entity->light.setFloatValue(entity->light.floatValue() / entity->samples.intValue());
     }
 
-    if (entity->style.intValue() < 0 || entity->style.intValue() > 254) {
-        Error("Bad light style %i (must be 0-254)", entity->style.intValue());
+    if (entity->style.intValue() < 0 || entity->style.intValue() > INVALID_LIGHTSTYLE) {
+        Error("Bad light style %i (must be 0-%i)", entity->style.intValue(), INVALID_LIGHTSTYLE-1);
     }
 }
 
@@ -1365,9 +1367,8 @@ WriteEntitiesToString(mbsp_t *bsp)
         free(bsp->dentdata);
 
     /* FIXME - why are we printing this here? */
-    logprint("%i switchable light styles (%d max)\n",
-             static_cast<int>(lightstyleForTargetname.size()),
-             MAX_LIGHT_TARGETS);
+    logprint("%i switchable light styles\n",
+             static_cast<int>(lightstyleForTargetname.size()));
 
     bsp->entdatasize = entdata.size() + 1; // +1 for a null byte at the end
     bsp->dentdata = (char *) calloc(bsp->entdatasize, 1);
