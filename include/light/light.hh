@@ -390,6 +390,7 @@ extern byte *filebase;
 extern byte *lit_filebase;
 extern byte *lux_filebase;
 
+extern int facestyles;
 extern int oversample;
 extern int write_litfile;
 extern int write_luxfile;
